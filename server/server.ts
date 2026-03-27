@@ -1,6 +1,6 @@
 import { mockURLs } from "./mockURLs.ts";
 
-interface URLCheckResult {
+export interface URLCheckResult {
   url: string;
   isFile: boolean;
   isFolder: boolean;
@@ -22,7 +22,7 @@ function isDir(pathname: string): boolean {
 // 1. Check if URL exists in the mockURLs array.
 // 2. Check if url is a file path or a folder path.
 // 3. Return a promise that resolves with the URL and its status (valid or invalid)
-export function urlChecker(url: string): Promise<URLCheckResult> {
+export function getURLStatus(url: string): Promise<URLCheckResult> {
   const urlSet = new Set(mockURLs);
   console.log("URL Set: ", urlSet);
 
@@ -40,7 +40,7 @@ export function urlChecker(url: string): Promise<URLCheckResult> {
 
 // async function main() {
 //   try {
-//     const response: URLCheckResult = await urlChecker("http://example.com/maybe.someone.did.this/");
+//     const response: URLCheckResult = await getURLStatus("http://example.com/maybe.someone.did.this/");
 //     console.log(response);
 //   } catch (error) {
 //     console.error(error);
