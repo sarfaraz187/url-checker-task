@@ -5,7 +5,7 @@ import { getURLStatus } from "../server/server.ts";
 import type { URLCheckResult } from "../server/server.ts";
 
 function App() {
-  const [urlObj, setUrlObj] = useState<{ url: string; isValid: boolean }>({ url: "https://", isValid: true });
+  const [urlObj, setUrlObj] = useState<{ url: string; isValid: boolean }>({ url: "", isValid: true });
   const [urlCheckResult, setUrlCheckResult] = useState<null | URLCheckResult>(null);
 
   const fetchURLStatus = async (url: string) => {
