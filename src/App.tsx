@@ -5,7 +5,7 @@ import { getURLStatus } from "../server/server.ts";
 import type { URLCheckResult } from "../server/server.ts";
 
 function App() {
-  const [urlObj, setUrlObj] = useState<{ url: string; isValid: boolean }>({ url: "", isValid: true });
+  const [urlObj, setUrlObj] = useState<{ url: string; isValid: boolean }>({ url: "https://", isValid: true });
   const [urlCheckResult, setUrlCheckResult] = useState<null | URLCheckResult>(null);
 
   const fetchURLStatus = async (url: string) => {
@@ -13,9 +13,9 @@ function App() {
       const result = await getURLStatus(url);
       console.log({ result });
       setUrlCheckResult(result);
-    } catch (error) {
+    } catch (error: unknown) {
       console.log({ error });
-      setUrlCheckResult(error);
+      setUrlCheckResult(error as URLCheckResult);
     }
   };
 
@@ -43,17 +43,32 @@ function App() {
           <div>
             <b>URL:</b> {urlCheckResult.url}
           </div>
-          <div>
-            <b>Is File:</b> {urlCheckResult.isFile ? "Yes" : "No"}
-          </div>
-          <div>
-            <b>Is Folder:</b> {urlCheckResult.isFolder ? "Yes" : "No"}
-          </div>
+
+          {urlCheckResult.status === "found" && (
+            <>
+              <div>
+                <b>Is File:</b> {urlCheckResult.isFile ? "Yes" : "No"}
+              </div>
+              <div>
+                <b>Is Folder:</b> {urlCheckResult.isFolder ? "Yes" : "No"}
+              </div>
+            </>
+          )}
+          {urlCheckResult.status === "not_found" && (
+            <div>
+              <b>Status:</b> Not Found
+            </div>
+          )}
+          {urlCheckResult.status === "error" && (
+            <div>
+              <b>Error:</b> {urlCheckResult.error}
+            </div>
+          )}
         </div>
       )}
 
       {/* Loading message */}
-      {!urlCheckResult && urlObj.isValid && urlObj.url.length > 0 && <div className="text-gray-500 flex justify-start items-start pl-2">Checking URL...</div>}
+      {!urlCheckResult && urlObj.isValid && urlObj.url.length > 0 && <div className="flex items-start">Checking URL...</div>}
 
       {!urlObj.isValid && <div className="text-red-500 flex justify-start items-start">Please enter a valid URL.</div>}
     </main>

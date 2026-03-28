@@ -1,14 +1,14 @@
 import { mockURLs } from "./mockURLs.ts";
 
+const urlSet = new Set(mockURLs);
+
 export interface URLCheckResult {
   url: string;
-  isFile: boolean;
-  isFolder: boolean;
-  error?: {
-    message: string;
-  };
+  status: "found" | "not_found" | "error";
+  isFile?: boolean;
+  isFolder?: boolean;
+  error?: string;
 }
-
 function isFile(pathname: string): boolean {
   const lastSegment = pathname.split("/").pop();
   if (lastSegment && lastSegment.indexOf(".") > -1) {
@@ -21,28 +21,31 @@ function isDir(pathname: string): boolean {
   return !isFile(pathname);
 }
 
-function throttle<Args extends unknown[]>(cb: (...args: Args) => void, delay = 1000): (...args: Args) => void {
+function throttle(cb: (url: string) => Promise<URLCheckResult>, delay = 1000): (url: string) => Promise<URLCheckResult> | undefined {
   let shouldWait = false;
-  let waitingArgs: Args | null = null;
+  let waitingArgs: string | null = null;
 
   const timerFunc = () => {
+    console.log("Inside timerFunc, shouldWait : ", shouldWait, "waitingArgs : ", waitingArgs);
     if (waitingArgs === null) {
       shouldWait = false;
     } else {
-      cb(...waitingArgs);
+      cb(waitingArgs);
       waitingArgs = null;
       setTimeout(timerFunc, delay);
     }
   };
 
-  return (...args: Args): void => {
+  return (url: string): Promise<URLCheckResult> | undefined => {
+    console.log("Inside throttled function, shouldWait : ", shouldWait, "url : ", url);
     if (shouldWait) {
-      waitingArgs = args;
-      return;
+      waitingArgs = url;
+      return undefined;
     }
-    cb(...args);
+
     shouldWait = true;
     setTimeout(timerFunc, delay);
+    return cb(url);
   };
 }
 
@@ -50,24 +53,30 @@ function throttle<Args extends unknown[]>(cb: (...args: Args) => void, delay = 1
 // 1. Check if URL exists in the mockURLs array.
 // 2. Check if url is a file path or a folder path.
 // 3. Return a promise that resolves with the URL and its status (valid or invalid)
-const urlSet = new Set(mockURLs); // also move this out, no need to rebuild every call
-
 const throttledCheck = throttle((url: string): Promise<URLCheckResult> => {
   return new Promise((resolve, reject) => {
-    const urlObj = new URL(url);
+    const urlObj = new URL(url.trim());
     console.log(`Checking URL: ${urlObj}`);
 
     if (!urlSet.has(url)) {
-      return reject({ url, isFile: false, isFolder: false });
+      return reject({ url, status: "not_found", isFile: false, isFolder: false });
     }
 
-    resolve({ url, isFile: isFile(urlObj.pathname), isFolder: isDir(urlObj.pathname) });
+    const isFileResult = isFile(urlObj.pathname);
+    const isFolderResult = isDir(urlObj.pathname);
+
+    console.log({ isFileResult, isFolderResult });
+    resolve({ url, status: "found", isFile: isFileResult, isFolder: isFolderResult });
   });
 }, 1000);
 
 export function getURLStatus(url: string): Promise<URLCheckResult> {
-  return { url: url, isFile: false, isFolder: false };
-  // return throttledCheck(url);
+  const result = throttledCheck(url);
+  console.log({ result });
+  if (!result) {
+    return Promise.reject({ url, status: "error", error: "Throttled, try again later" });
+  }
+  return result;
 }
 
 // async function main() {
