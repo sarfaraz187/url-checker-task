@@ -24,13 +24,18 @@ function isDir(pathname: string): boolean {
 function throttle(cb: (url: string) => Promise<URLCheckResult>, delay = 1000): (url: string) => Promise<URLCheckResult> | undefined {
   let shouldWait = false;
   let waitingArgs: string | null = null;
+  let waitingResolve: ((value: URLCheckResult) => void) | null = null;
+  let waitingReject: ((reason: URLCheckResult) => void) | null = null;
 
   const timerFunc = () => {
     console.log("Inside timerFunc, shouldWait : ", shouldWait, "waitingArgs : ", waitingArgs);
     if (waitingArgs === null) {
       shouldWait = false;
     } else {
-      cb(waitingArgs);
+      cb(waitingArgs).then(waitingResolve!).catch(waitingReject!);
+      waitingArgs = null;
+      waitingResolve = null;
+      waitingReject = null;
       waitingArgs = null;
       setTimeout(timerFunc, delay);
     }
@@ -40,7 +45,10 @@ function throttle(cb: (url: string) => Promise<URLCheckResult>, delay = 1000): (
     console.log("Inside throttled function, shouldWait : ", shouldWait, "url : ", url);
     if (shouldWait) {
       waitingArgs = url;
-      return undefined;
+      return new Promise((resolve, reject) => {
+        waitingResolve = resolve;
+        waitingReject = reject;
+      });
     }
 
     shouldWait = true;
