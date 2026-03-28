@@ -1,38 +1,32 @@
 import { Input } from "@/components/ui/input";
 import "@/App.css";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { getURLStatus } from "../server/server.ts";
 import type { URLCheckResult } from "../server/server.ts";
 
 function App() {
-  const [url, setUrl] = useState("");
-  const [isValidUrl, setIsValidUrl] = useState(true);
+  const [urlObj, setUrlObj] = useState<{ url: string; isValid: boolean }>({ url: "", isValid: true });
   const [urlCheckResult, setUrlCheckResult] = useState<null | URLCheckResult>(null);
 
-  useEffect(() => {
-    console.clear();
-    console.log("URL or validity changed: ", { url, isValidUrl });
-
-    if (isValidUrl && url.length > 0) {
-      const response = getURLStatus(url);
-      response
-        .then((result) => {
-          console.log("URL Check Result: ", result);
-          setUrlCheckResult(result);
-        })
-        .catch((error) => {
-          console.log("Error checking URL: ", error);
-          setUrlCheckResult(error);
-        });
+  const fetchURLStatus = async (url: string) => {
+    try {
+      const result = await getURLStatus(url);
+      console.log({ result });
+      setUrlCheckResult(result);
+    } catch (error) {
+      console.log({ error });
+      setUrlCheckResult(error);
     }
-  }, [isValidUrl, url]);
+  };
 
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const url = event.target.value;
-    setUrl(url);
+    const value = event.target.value;
+    const isValid = value.length === 0 || value.startsWith("http://") || value.startsWith("https://");
 
-    const isValid = url.startsWith("http://") || url.startsWith("https://");
-    setIsValidUrl(url.length > 0 && isValid);
+    setUrlObj({ url: value, isValid });
+    if (isValid && value.length > 0) {
+      fetchURLStatus(value);
+    }
   };
 
   return (
@@ -41,33 +35,27 @@ function App() {
         <b>URL Checker</b>
       </h1>
 
-      <Input className="" placeholder="Enter URL..." onChange={handleInputChange} value={url} />
+      <Input className="" placeholder="Enter URL..." onChange={handleInputChange} value={urlObj.url} />
 
       {/* Result block */}
-      <>
-        {isValidUrl && urlCheckResult && (
-          <div className="flex flex-col items-start gap-2">
-            <div>
-              <b>URL:</b> {urlCheckResult.url}
-            </div>
-            <div>
-              <b>Is File:</b> {urlCheckResult.isFile ? "Yes" : "No"}
-            </div>
-            <div>
-              <b>Is Folder:</b> {urlCheckResult.isFolder ? "Yes" : "No"}
-            </div>
+      {urlObj.isValid && urlCheckResult && (
+        <div className="flex flex-col items-start gap-2">
+          <div>
+            <b>URL:</b> {urlCheckResult.url}
           </div>
-        )}
-
-        {/* Loading message */}
-        {!urlCheckResult && isValidUrl && url.length > 0 && <div className="text-gray-500 flex justify-start items-start pl-2">Checking URL...</div>}
-      </>
-
-      {!isValidUrl && (
-        <>
-          <div className="text-red-500 flex justify-start items-start">Please enter a valid URL.</div>{" "}
-        </>
+          <div>
+            <b>Is File:</b> {urlCheckResult.isFile ? "Yes" : "No"}
+          </div>
+          <div>
+            <b>Is Folder:</b> {urlCheckResult.isFolder ? "Yes" : "No"}
+          </div>
+        </div>
       )}
+
+      {/* Loading message */}
+      {!urlCheckResult && urlObj.isValid && urlObj.url.length > 0 && <div className="text-gray-500 flex justify-start items-start pl-2">Checking URL...</div>}
+
+      {!urlObj.isValid && <div className="text-red-500 flex justify-start items-start">Please enter a valid URL.</div>}
     </main>
   );
 }
